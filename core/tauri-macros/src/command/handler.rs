@@ -55,6 +55,9 @@ impl From<Handler> for proc_macro::TokenStream {
     let cmd = format_ident!("__tauri_cmd__");
     let invoke = format_ident!("__tauri_invoke__");
     quote::quote!(move |#invoke| {
+      #[allow(unused_imports)]
+      use ::tauri::command::private::*;
+
       let #cmd = #invoke.message.command();
       match #cmd {
         #(stringify!(#commands) => #wrappers!(#paths, #invoke),)*

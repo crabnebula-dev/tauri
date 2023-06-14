@@ -104,20 +104,31 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
   };
 
   // body to the command wrapper or a `compile_error!` of an error occurred while parsing it.
-  let body = syn::parse::<WrapperAttributes>(attributes)
-    .map(|mut attrs| {
-      if function.sig.asyncness.is_some() {
-        attrs.execution_context = ExecutionContext::Async;
-      }
-      attrs
-    })
-    .and_then(|attrs| match attrs.execution_context {
-      ExecutionContext::Async => body_async(&function, &invoke, attrs.argument_case),
-      ExecutionContext::Blocking => body_blocking(&function, &invoke, attrs.argument_case),
-    })
-    .unwrap_or_else(syn::Error::into_compile_error);
+  let mut attrs = match syn::parse::<WrapperAttributes>(attributes) {
+    Ok(attrs) => attrs,
+    Err(err) => return err.into_compile_error().into(),
+  };
+
+  if function.sig.asyncness.is_some() {
+    attrs.execution_context = ExecutionContext::Async;
+  }
+
+  let body = match attrs.execution_context {
+    ExecutionContext::Async => body_async(&function, &invoke, attrs.argument_case).unwrap_or_else(syn::Error::into_compile_error),
+    ExecutionContext::Blocking => body_blocking(&function, &invoke, attrs.argument_case).unwrap_or_else(syn::Error::into_compile_error),
+  };
 
   let Invoke { message, resolver } = invoke;
+
+  let kind = match attrs.execution_context {
+    ExecutionContext::Async if function.sig.asyncness.is_none() => "sync_threadpool",
+    ExecutionContext::Async => "async",
+    ExecutionContext::Blocking => "sync"
+  };
+
+  let loc = function.span().start();
+  let line = loc.line;
+  let col = loc.column;
 
   // Rely on rust 2018 edition to allow importing a macro from a path.
   quote!(
@@ -128,11 +139,20 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
     macro_rules! #wrapper {
         // double braces because the item is expected to be a block expression
         ($path:path, $invoke:ident) => {{
-          #[allow(unused_imports)]
-          use ::tauri::command::private::*;
           // prevent warnings when the body is a `compile_error!` or if the command has no arguments
           #[allow(unused_variables)]
           let ::tauri::Invoke { message: #message, resolver: #resolver } = $invoke;
+
+          let span = tracing::debug_span!(
+            "ipc.request",
+            id = 0,
+            cmd = #message.command(),
+            kind = #kind,
+            loc.line = #line,
+            loc.col = #col,
+            is_internal = false,
+          );
+          let _enter = span.enter();
 
           #body
       }};
@@ -176,14 +196,10 @@ fn body_blocking(
   let Invoke { message, resolver } = invoke;
   let args = parse_args(function, message, case)?;
 
-  // the body of a `match` to early return any argument that wasn't successful in parsing.
-  let match_body = quote!({
-    Ok(arg) => arg,
-    Err(err) => return #resolver.invoke_error(err),
-  });
-
   Ok(quote! {
-    let result = $path(#(match #args #match_body),*);
+    let result = tracing::debug_span!("ipc.request.handler")
+          .in_scope(|| $path(#(#args.unwrap()),*));
+
     let kind = (&result).blocking_kind();
     kind.block(result, #resolver);
   })

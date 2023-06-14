@@ -10,6 +10,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serialize_to_javascript::{default_template, Template};
+use tracing::Instrument;
 use std::{future::Future, sync::Arc};
 
 use tauri_macros::default_runtime;
@@ -140,6 +141,7 @@ impl InvokeResponse {
 
 impl<T: Serialize> From<Result<T, InvokeError>> for InvokeResponse {
   #[inline]
+  #[tracing::instrument(skip(result), name = "ipc.request.serialize_returns")]
   fn from(result: Result<T, InvokeError>) -> Self {
     match result {
       Ok(ok) => match serde_json::to_value(ok) {
@@ -191,13 +193,14 @@ impl<R: Runtime> InvokeResolver<R> {
   where
     F: Future<Output = Result<JsonValue, InvokeError>> + Send + 'static,
   {
+    let span = tracing::debug_span!("ipc.request.handler");
     crate::async_runtime::spawn(async move {
       let response = match task.await {
         Ok(ok) => InvokeResponse::Ok(ok),
         Err(err) => InvokeResponse::Err(err),
       };
       Self::return_result(self.window, response, self.callback, self.error)
-    });
+    }.instrument(span));
   }
 
   /// Reply to the invoke promise with a serializable value.
