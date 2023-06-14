@@ -559,7 +559,6 @@ impl<R: Runtime> Update<R> {
       .and_then(|value| value.parse().ok());
 
     let mut buffer = Vec::new();
-    #[cfg(feature = "reqwest-client")]
     {
       use futures_util::StreamExt;
       let mut stream = response.bytes_stream();
@@ -568,25 +567,6 @@ impl<R: Runtime> Update<R> {
         let bytes = chunk.as_ref().to_vec();
         on_chunk(bytes.len(), content_length);
         buffer.extend(bytes);
-      }
-    }
-    #[cfg(not(feature = "reqwest-client"))]
-    {
-      let mut reader = response.reader();
-      let mut buf = [0; 16384];
-      loop {
-        match reader.read(&mut buf) {
-          Ok(b) => {
-            if b == 0 {
-              break;
-            } else {
-              let bytes = buf[0..b].to_vec();
-              on_chunk(bytes.len(), content_length);
-              buffer.extend(bytes);
-            }
-          }
-          Err(e) => return Err(e.into()),
-        }
       }
     }
 
@@ -735,15 +715,11 @@ fn copy_files_and_run<R: Read + Seek>(
     // If it's an `exe` we expect an installer not a runtime.
     if found_path.extension() == Some(OsStr::new("exe")) {
       // Run the EXE
-      let mut installer = Command::new(found_path);
-      if crate::utils::config::WindowsUpdateInstallMode::Quiet
-        == config.tauri.updater.windows.install_mode
-      {
-        installer.arg("/S");
-      }
-      installer.args(&config.tauri.updater.windows.installer_args);
-
-      installer.spawn().expect("installer failed to start");
+      Command::new(found_path)
+        .args(config.tauri.updater.windows.install_mode.nsis_args())
+        .args(&config.tauri.updater.windows.installer_args)
+        .spawn()
+        .expect("installer failed to start");
 
       exit(0);
     } else if found_path.extension() == Some(OsStr::new("msi")) {
@@ -802,7 +778,6 @@ fn copy_files_and_run<R: Read + Seek>(
         .updater
         .windows
         .install_mode
-        .clone()
         .msiexec_args()
         .iter()
         .map(|p| p.to_string())
