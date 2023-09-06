@@ -4,17 +4,18 @@
 
 use heck::{ToLowerCamelCase, ToSnakeCase};
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
   ext::IdentExt,
   parse::{Parse, ParseStream},
   parse_macro_input,
   spanned::Spanned,
-  FnArg, Ident, ItemFn, Lit, Meta, Pat, Token, Visibility,
+  FnArg, ItemFn, Lit, Meta, Pat, Token, Visibility,
 };
 
 struct WrapperAttributes {
+  root: TokenStream2,
   execution_context: ExecutionContext,
   argument_case: ArgumentCase,
 }
@@ -22,6 +23,7 @@ struct WrapperAttributes {
 impl Parse for WrapperAttributes {
   fn parse(input: ParseStream) -> syn::Result<Self> {
     let mut wrapper_attributes = WrapperAttributes {
+      root: quote!(::tauri),
       execution_context: ExecutionContext::Blocking,
       argument_case: ArgumentCase::Camel,
     };
@@ -41,6 +43,17 @@ impl Parse for WrapperAttributes {
                     "expected \"camelCase\" or \"snake_case\"",
                   ))
                 }
+              };
+            }
+          } else if v.path.is_ident("root") {
+            if let Lit::Str(s) = v.lit {
+              let lit = s.value();
+
+              wrapper_attributes.root = if lit == "crate" {
+                quote!($crate)
+              } else {
+                let ident = Ident::new(&lit, Span::call_site());
+                quote!(#ident)
               };
             }
           }
@@ -161,23 +174,25 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
   }
 
   // body to the command wrapper or a `compile_error!` of an error occurred while parsing it.
-  let mut attrs = match syn::parse::<WrapperAttributes>(attributes) {
-    Ok(attrs) => attrs,
-    Err(err) => return err.into_compile_error().into(),
-  };
-
-  if function.sig.asyncness.is_some() {
-    attrs.execution_context = ExecutionContext::Async;
-  }
-
-  let body = match attrs.execution_context {
-    ExecutionContext::Async => body_async(&function, &invoke, attrs.argument_case).unwrap_or_else(syn::Error::into_compile_error),
-    ExecutionContext::Blocking => body_blocking(&function, &invoke, attrs.argument_case).unwrap_or_else(syn::Error::into_compile_error),
-  };
+let (body, attributes) = syn::parse::<WrapperAttributes>(attributes)
+  .map(|mut attrs| {
+    if function.sig.asyncness.is_some() {
+      attrs.execution_context = ExecutionContext::Async;
+    }
+    attrs
+  })
+  .and_then(|attrs| {
+    let body = match attrs.execution_context {
+      ExecutionContext::Async => body_async(&function, &invoke, &attrs),
+      ExecutionContext::Blocking => body_blocking(&function, &invoke, &attrs),
+    };
+    body.map(|b| (b, Some(attrs)))
+  })
+  .unwrap_or_else(|e| (syn::Error::into_compile_error(e), None));
 
   let Invoke { message, resolver } = invoke;
 
-  let kind = match attrs.execution_context {
+  let kind = match attributes.execution_context {
     ExecutionContext::Async if function.sig.asyncness.is_none() => "sync_threadpool",
     ExecutionContext::Async => "async",
     ExecutionContext::Blocking => "sync"
@@ -186,6 +201,10 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
   let loc = function.span().start();
   let line = loc.line;
   let col = loc.column;
+
+  let root = attributes
+    .map(|a| a.root)
+    .unwrap_or_else(|| quote!(::tauri));
 
   // Rely on rust 2018 edition to allow importing a macro from a path.
   quote!(
@@ -198,9 +217,11 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
     macro_rules! #wrapper {
         // double braces because the item is expected to be a block expression
         ($path:path, $invoke:ident) => {{
+          #[allow(unused_imports)]
+          use #root::command::private::*;
           // prevent warnings when the body is a `compile_error!` or if the command has no arguments
           #[allow(unused_variables)]
-          let ::tauri::Invoke { message: #message, resolver: #resolver } = $invoke;
+          let #root::ipc::Invoke { message: #message, resolver: #resolver } = $invoke;
 
           let span = tracing::debug_span!(
             "ipc.request",
@@ -229,15 +250,20 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
 /// See the [`tauri::command`] module for all the items and traits that make this possible.
 ///
 /// [`tauri::command`]: https://docs.rs/tauri/*/tauri/runtime/index.html
-fn body_async(function: &ItemFn, invoke: &Invoke, case: ArgumentCase) -> syn::Result<TokenStream2> {
+fn body_async(
+  function: &ItemFn,
+  invoke: &Invoke,
+  attributes: &WrapperAttributes,
+) -> syn::Result<TokenStream2> {
   let Invoke { message, resolver } = invoke;
-  parse_args(function, message, case).map(|args| {
+  parse_args(function, message, attributes).map(|args| {
     quote! {
       #resolver.respond_async_serialized(async move {
         let result = $path(#(#args?),*);
         let kind = (&result).async_kind();
         kind.future(result).await
       });
+      return true;
     }
   })
 }
@@ -250,10 +276,16 @@ fn body_async(function: &ItemFn, invoke: &Invoke, case: ArgumentCase) -> syn::Re
 fn body_blocking(
   function: &ItemFn,
   invoke: &Invoke,
-  case: ArgumentCase,
+  attributes: &WrapperAttributes,
 ) -> syn::Result<TokenStream2> {
   let Invoke { message, resolver } = invoke;
-  let args = parse_args(function, message, case)?;
+  let args = parse_args(function, message, attributes)?;
+
+  // the body of a `match` to early return any argument that wasn't successful in parsing.
+  let match_body = quote!({
+    Ok(arg) => arg,
+    Err(err) => { #resolver.invoke_error(err); return true },
+  });
 
   Ok(quote! {
     let result = tracing::debug_span!("ipc.request.handler")
@@ -261,6 +293,7 @@ fn body_blocking(
 
     let kind = (&result).blocking_kind();
     kind.block(result, #resolver);
+    return true;
   })
 }
 
@@ -268,13 +301,13 @@ fn body_blocking(
 fn parse_args(
   function: &ItemFn,
   message: &Ident,
-  case: ArgumentCase,
+  attributes: &WrapperAttributes,
 ) -> syn::Result<Vec<TokenStream2>> {
   function
     .sig
     .inputs
     .iter()
-    .map(|arg| parse_arg(&function.sig.ident, arg, message, case))
+    .map(|arg| parse_arg(&function.sig.ident, arg, message, attributes))
     .collect()
 }
 
@@ -283,7 +316,7 @@ fn parse_arg(
   command: &Ident,
   arg: &FnArg,
   message: &Ident,
-  case: ArgumentCase,
+  attributes: &WrapperAttributes,
 ) -> syn::Result<TokenStream2> {
   // we have no use for self arguments
   let mut arg = match arg {
@@ -318,7 +351,7 @@ fn parse_arg(
     ));
   }
 
-  match case {
+  match attributes.argument_case {
     ArgumentCase::Camel => {
       key = key.to_lower_camel_case();
     }
@@ -327,8 +360,10 @@ fn parse_arg(
     }
   }
 
-  Ok(quote!(::tauri::command::CommandArg::from_command(
-    ::tauri::command::CommandItem {
+  let root = &attributes.root;
+
+  Ok(quote!(#root::command::CommandArg::from_command(
+    #root::command::CommandItem {
       name: stringify!(#command),
       key: #key,
       message: &#message,

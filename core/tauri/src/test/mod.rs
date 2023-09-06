@@ -42,12 +42,12 @@
 //!     // in this case we'll run the my_cmd command with no arguments
 //!     tauri::test::assert_ipc_response(
 //!       &window,
-//!       tauri::InvokePayload {
+//!       tauri::window::InvokeRequest {
 //!         cmd: "my_cmd".into(),
-//!         tauri_module: None,
-//!         callback: tauri::api::ipc::CallbackFn(0),
-//!         error: tauri::api::ipc::CallbackFn(1),
-//!         inner: serde_json::Value::Null,
+//!         callback: tauri::ipc::CallbackFn(0),
+//!         error: tauri::ipc::CallbackFn(1),
+//!         body: serde_json::Value::Null.into(),
+//!         headers: Default::default(),
 //!       },
 //!       Ok(())
 //!     );
@@ -60,26 +60,22 @@
 mod mock_runtime;
 pub use mock_runtime::*;
 use serde::Serialize;
-use serde_json::Value as JsonValue;
 
 use std::{
   borrow::Cow,
-  collections::HashMap,
   fmt::Debug,
   hash::{Hash, Hasher},
-  sync::{
-    mpsc::{channel, Sender},
-    Arc, Mutex,
-  },
+  sync::Arc,
 };
 
-use crate::hooks::window_invoke_responder;
-#[cfg(shell_scope)]
-use crate::ShellScopeConfig;
-use crate::{api::ipc::CallbackFn, App, Builder, Context, InvokePayload, Manager, Pattern, Window};
+use crate::{
+  ipc::{CallbackFn, InvokeResponse},
+  window::InvokeRequest,
+  App, Builder, Context, Pattern, Window,
+};
 use tauri_utils::{
   assets::{AssetKey, Assets, CspHash},
-  config::{CliConfig, Config, PatternKind, TauriConfig},
+  config::{Config, PatternKind, TauriConfig},
 };
 
 #[derive(Eq, PartialEq)]
@@ -94,8 +90,6 @@ impl Hash for IpcKey {
     self.error.0.hash(state);
   }
 }
-
-struct Ipc(Mutex<HashMap<IpcKey, Sender<std::result::Result<JsonValue, JsonValue>>>>);
 
 /// An empty [`Assets`] implementation.
 pub struct NoopAsset {
@@ -127,20 +121,10 @@ pub fn mock_context<A: Assets>(assets: A) -> crate::Context<A> {
       package: Default::default(),
       tauri: TauriConfig {
         pattern: PatternKind::Brownfield,
-        windows: vec![Default::default()],
-        cli: Some(CliConfig {
-          description: None,
-          long_description: None,
-          before_help: None,
-          after_help: None,
-          args: None,
-          subcommands: None,
-        }),
+        windows: Vec::new(),
         bundle: Default::default(),
-        allowlist: Default::default(),
         security: Default::default(),
-        updater: Default::default(),
-        system_tray: None,
+        tray_icon: None,
         macos_private_api: false,
       },
       build: Default::default(),
@@ -149,20 +133,17 @@ pub fn mock_context<A: Assets>(assets: A) -> crate::Context<A> {
     assets: Arc::new(assets),
     default_window_icon: None,
     app_icon: None,
-    system_tray_icon: None,
+    #[cfg(all(desktop, feature = "tray-icon"))]
+    tray_icon: None,
     package_info: crate::PackageInfo {
       name: "test".into(),
       version: "0.1.0".parse().unwrap(),
       authors: "Tauri",
       description: "Tauri test",
+      crate_name: "test",
     },
     _info_plist: (),
     pattern: Pattern::Brownfield(std::marker::PhantomData),
-    #[cfg(shell_scope)]
-    shell_scope: ShellScopeConfig {
-      open: None,
-      scopes: HashMap::new(),
-    },
   }
 }
 
@@ -182,20 +163,7 @@ pub fn mock_context<A: Assets>(assets: A) -> crate::Context<A> {
 /// }
 /// ```
 pub fn mock_builder() -> Builder<MockRuntime> {
-  let mut builder = Builder::<MockRuntime>::new().manage(Ipc(Default::default()));
-
-  builder.invoke_responder = Arc::new(|window, response, callback, error| {
-    let window_ = window.clone();
-    let ipc = window_.state::<Ipc>();
-    let mut ipc_ = ipc.0.lock().unwrap();
-    if let Some(tx) = ipc_.remove(&IpcKey { callback, error }) {
-      tx.send(response.into_result()).unwrap();
-    } else {
-      window_invoke_responder(window, response, callback, error)
-    }
-  });
-
-  builder
+  Builder::<MockRuntime>::new().enable_macos_default_menu(false)
 }
 
 /// Creates a new [`App`] for testing using the [`mock_context`] with a [`noop_assets`].
@@ -238,12 +206,12 @@ pub fn mock_app() -> App<MockRuntime> {
 ///     // run the `ping` command and assert it returns `pong`
 ///     tauri::test::assert_ipc_response(
 ///       &window,
-///       tauri::InvokePayload {
+///       tauri::window::InvokeRequest {
 ///         cmd: "ping".into(),
-///         tauri_module: None,
-///         callback: tauri::api::ipc::CallbackFn(0),
-///         error: tauri::api::ipc::CallbackFn(1),
-///         inner: serde_json::Value::Null,
+///         callback: tauri::ipc::CallbackFn(0),
+///         error: tauri::ipc::CallbackFn(1),
+///         body: serde_json::Value::Null.into(),
+///         headers: Default::default(),
 ///       },
 ///       // the expected response is a success with the "pong" payload
 ///       // we could also use Err("error message") here to ensure the command failed
@@ -254,18 +222,17 @@ pub fn mock_app() -> App<MockRuntime> {
 /// ```
 pub fn assert_ipc_response<T: Serialize + Debug>(
   window: &Window<MockRuntime>,
-  payload: InvokePayload,
+  request: InvokeRequest,
   expected: Result<T, T>,
 ) {
-  let callback = payload.callback;
-  let error = payload.error;
-  let ipc = window.state::<Ipc>();
-  let (tx, rx) = channel();
-  ipc.0.lock().unwrap().insert(IpcKey { callback, error }, tx);
-  window.clone().on_message(payload).unwrap();
+  let rx = window.clone().on_message(request);
+  let response = rx.recv().unwrap();
 
   assert_eq!(
-    rx.recv().unwrap(),
+    match response {
+      InvokeResponse::Ok(b) => Ok(b.into_json()),
+      InvokeResponse::Err(e) => Err(e.0),
+    },
     expected
       .map(|e| serde_json::to_value(e).unwrap())
       .map_err(|e| serde_json::to_value(e).unwrap())
@@ -273,18 +240,8 @@ pub fn assert_ipc_response<T: Serialize + Debug>(
 }
 
 #[cfg(test)]
-pub(crate) fn mock_invoke_context() -> crate::endpoints::InvokeContext<MockRuntime> {
-  let app = mock_app();
-  crate::endpoints::InvokeContext {
-    window: app.get_window("main").unwrap(),
-    config: app.config(),
-    package_info: app.package_info().clone(),
-  }
-}
-
-#[cfg(test)]
 mod tests {
-  use crate::Manager;
+  use crate::WindowBuilder;
   use std::time::Duration;
 
   use super::mock_app;
@@ -292,7 +249,11 @@ mod tests {
   #[test]
   fn run_app() {
     let app = mock_app();
-    let w = app.get_window("main").unwrap();
+
+    let w = WindowBuilder::new(&app, "main", Default::default())
+      .build()
+      .unwrap();
+
     std::thread::spawn(move || {
       std::thread::sleep(Duration::from_secs(1));
       w.close().unwrap();

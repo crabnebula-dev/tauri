@@ -4,12 +4,12 @@
 
 //! Items specific to the [`Runtime`](crate::Runtime)'s webview.
 
-use crate::{menu::Menu, window::DetachedWindow, Icon};
+use crate::{window::DetachedWindow, Icon};
 
 #[cfg(target_os = "macos")]
 use tauri_utils::TitleBarStyle;
 use tauri_utils::{
-  config::{WindowConfig, WindowUrl},
+  config::{WindowConfig, WindowEffectsConfig, WindowUrl},
   Theme,
 };
 
@@ -29,11 +29,14 @@ pub struct WebviewAttributes {
   pub clipboard: bool,
   pub accept_first_mouse: bool,
   pub additional_browser_args: Option<String>,
+  pub window_effects: Option<WindowEffectsConfig>,
+  pub incognito: bool,
 }
 
 impl From<&WindowConfig> for WebviewAttributes {
   fn from(config: &WindowConfig) -> Self {
     let mut builder = Self::new(config.url.clone());
+    builder = builder.incognito(config.incognito);
     builder = builder.accept_first_mouse(config.accept_first_mouse);
     if !config.file_drop_enabled {
       builder = builder.disable_file_drop_handler();
@@ -44,10 +47,12 @@ impl From<&WindowConfig> for WebviewAttributes {
     if let Some(additional_browser_args) = &config.additional_browser_args {
       builder = builder.additional_browser_args(additional_browser_args);
     }
+    if let Some(effects) = &config.window_effects {
+      builder = builder.window_effects(effects.clone());
+    }
     builder
   }
 }
-
 impl WebviewAttributes {
   /// Initializes the default attributes for a webview.
   pub fn new(url: WindowUrl) -> Self {
@@ -60,6 +65,8 @@ impl WebviewAttributes {
       clipboard: false,
       accept_first_mouse: false,
       additional_browser_args: None,
+      window_effects: None,
+      incognito: false,
     }
   }
 
@@ -114,6 +121,20 @@ impl WebviewAttributes {
     self.additional_browser_args = Some(additional_args.to_string());
     self
   }
+
+  /// Sets window effects
+  #[must_use]
+  pub fn window_effects(mut self, effects: WindowEffectsConfig) -> Self {
+    self.window_effects = Some(effects);
+    self
+  }
+
+  /// Enable or disable incognito mode for the WebView.
+  #[must_use]
+  pub fn incognito(mut self, incognito: bool) -> Self {
+    self.incognito = incognito;
+    self
+  }
 }
 
 /// Do **NOT** implement this trait except for use in a custom [`Runtime`](crate::Runtime).
@@ -131,10 +152,6 @@ pub trait WindowBuilder: WindowBuilderBase {
 
   /// Initializes a new webview builder from a [`WindowConfig`]
   fn with_config(config: WindowConfig) -> Self;
-
-  /// Sets the menu for the window.
-  #[must_use]
-  fn menu(self, menu: Menu) -> Self;
 
   /// Show window in the center of the screen.
   #[must_use]
@@ -227,6 +244,10 @@ pub trait WindowBuilder: WindowBuilderBase {
   #[must_use]
   fn always_on_top(self, always_on_top: bool) -> Self;
 
+  /// Whether the window should be visible on all workspaces or virtual desktops.
+  #[must_use]
+  fn visible_on_all_workspaces(self, visible_on_all_workspaces: bool) -> Self;
+
   /// Prevents the window contents from being captured by other apps.
   #[must_use]
   fn content_protected(self, protected: bool) -> Self;
@@ -237,6 +258,18 @@ pub trait WindowBuilder: WindowBuilderBase {
   /// Sets whether or not the window icon should be added to the taskbar.
   #[must_use]
   fn skip_taskbar(self, skip: bool) -> Self;
+
+  /// Sets whether or not the window has shadow.
+  ///
+  /// ## Platform-specific
+  ///
+  /// - **Windows:**
+  ///   - `false` has no effect on decorated window, shadows are always ON.
+  ///   - `true` will make ndecorated window have a 1px white border,
+  /// and on Windows 11, it will have a rounded corners.
+  /// - **Linux:** Unsupported.
+  #[must_use]
+  fn shadow(self, enable: bool) -> Self;
 
   /// Sets a parent to the window to be created.
   ///
@@ -293,9 +326,6 @@ pub trait WindowBuilder: WindowBuilderBase {
 
   /// Whether the icon was set or not.
   fn has_icon(&self) -> bool;
-
-  /// Gets the window menu.
-  fn get_menu(&self) -> Option<&Menu>;
 }
 
 /// IPC handler.

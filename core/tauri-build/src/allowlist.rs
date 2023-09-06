@@ -43,11 +43,17 @@ pub fn check(config: &Config, manifest: &mut Manifest) -> Result<()> {
       name: "tauri".into(),
       alias: None,
       kind: DependencyKind::Normal,
-      all_cli_managed_features: Some(TauriConfig::all_features()),
+      all_cli_managed_features: Some(
+        TauriConfig::all_features()
+          .into_iter()
+          .filter(|f| f != &"tray-icon")
+          .collect(),
+      ),
       expected_features: config
         .tauri
         .features()
         .into_iter()
+        .filter(|f| f != &"tray-icon")
         .map(|f| f.to_string())
         .collect::<Vec<String>>(),
     },

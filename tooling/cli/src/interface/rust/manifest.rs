@@ -98,7 +98,7 @@ pub fn read_manifest(manifest_path: &Path) -> crate::Result<Document> {
   Ok(manifest)
 }
 
-fn toml_array(features: &HashSet<String>) -> Array {
+pub fn toml_array(features: &HashSet<String>) -> Array {
   let mut f = Array::default();
   let mut features: Vec<String> = features.iter().map(|f| f.to_string()).collect();
   features.sort();
@@ -289,7 +289,10 @@ pub fn rewrite_manifest(config: &Config) -> crate::Result<Manifest> {
   dependencies.push(DependencyAllowlist {
     name: "tauri".into(),
     kind: DependencyKind::Normal,
-    all_cli_managed_features: crate::helpers::config::TauriConfig::all_features(),
+    all_cli_managed_features: crate::helpers::config::TauriConfig::all_features()
+      .into_iter()
+      .filter(|f| f != &"tray-icon")
+      .collect(),
     features: tauri_features,
   });
 

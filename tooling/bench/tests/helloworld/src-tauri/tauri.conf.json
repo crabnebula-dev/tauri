@@ -33,9 +33,6 @@
         "exceptionDomain": ""
       }
     },
-    "allowlist": {
-      "all": false
-    },
     "windows": [
       {
         "title": "Welcome to Tauri!",
@@ -46,10 +43,7 @@
       }
     ],
     "security": {
-      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self'"
-    },
-    "updater": {
-      "active": false
+      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self'; connect-src ipc: https://ipc.localhost"
     }
   }
 }

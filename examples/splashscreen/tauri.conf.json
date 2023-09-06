@@ -26,9 +26,6 @@
       "copyright": "",
       "category": "DeveloperTool"
     },
-    "allowlist": {
-      "all": false
-    },
     "windows": [
       {
         "label": "main",
@@ -47,10 +44,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'"
-    },
-    "updater": {
-      "active": false
+      "csp": "default-src 'self'; connect-src ipc: https://ipc.localhost"
     }
   }
 }

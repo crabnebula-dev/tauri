@@ -9,19 +9,13 @@
       "identifier": "studio.tauri.example",
       "active": true
     },
-    "allowlist": {
-      "all": true
-    },
     "windows": [
       {
         "title": "Tauri App"
       }
     ],
     "security": {
-      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self'"
-    },
-    "updater": {
-      "active": false
+      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self'; connect-src ipc: https://ipc.localhost"
     }
   }
 }

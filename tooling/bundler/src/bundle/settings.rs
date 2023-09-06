@@ -7,7 +7,7 @@ use super::category::AppCategory;
 use crate::bundle::{common, platform::target_triple};
 pub use tauri_utils::config::WebviewInstallMode;
 use tauri_utils::{
-  config::{BundleType, NSISInstallerMode},
+  config::{BundleType, FileAssociation, NSISInstallerMode},
   resources::{external_binaries, ResourcePaths},
 };
 
@@ -137,12 +137,8 @@ pub struct PackageSettings {
 pub struct UpdaterSettings {
   /// Whether the updater is active or not.
   pub active: bool,
-  /// The updater endpoints.
-  pub endpoints: Option<Vec<String>>,
   /// Signature public key.
   pub pubkey: String,
-  /// Display built-in dialog or use event system if disabled.
-  pub dialog: bool,
   /// Args to pass to `msiexec.exe` to run the updater on Windows.
   pub msiexec_args: Option<&'static [&'static str]>,
 }
@@ -366,6 +362,8 @@ pub struct BundleSettings {
   pub copyright: Option<String>,
   /// the app's category.
   pub category: Option<AppCategory>,
+  /// the file associations
+  pub file_associations: Option<Vec<FileAssociation>>,
   /// the app's short description.
   pub short_description: Option<String>,
   /// the app's long description.
@@ -657,8 +655,7 @@ impl Settings {
       "windows" => vec![PackageType::WindowsMsi, PackageType::Nsis],
       os => {
         return Err(crate::Error::GenericError(format!(
-          "Native {} bundles not yet supported.",
-          os
+          "Native {os} bundles not yet supported."
         )))
       }
     };
@@ -789,6 +786,11 @@ impl Settings {
   /// Returns the app's category.
   pub fn app_category(&self) -> Option<AppCategory> {
     self.bundle_settings.category
+  }
+
+  /// Return file associations.
+  pub fn file_associations(&self) -> &Option<Vec<FileAssociation>> {
+    &self.bundle_settings.file_associations
   }
 
   /// Returns the app's short description.
