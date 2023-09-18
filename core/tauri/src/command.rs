@@ -169,6 +169,7 @@ pub mod private {
   use serde::Serialize;
   use serde_json::Value;
   use std::future::Future;
+  pub use tracing;
 
   // ===== impl Serialize =====
 

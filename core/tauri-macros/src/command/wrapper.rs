@@ -361,7 +361,7 @@ fn parse_arg(
 
   Ok(quote!(::tauri::command::CommandArg::from_command(
     ::tauri::command::CommandItem {
-      invoke_id: #invoke_id,
+      invoke_id: &#invoke_id,
       name: stringify!(#command),
       key: #key,
       message: &#message,
