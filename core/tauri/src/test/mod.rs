@@ -73,7 +73,7 @@ use std::{
   },
 };
 
-use crate::hooks::window_invoke_responder;
+use crate::hooks::{window_invoke_responder, InvokeId};
 #[cfg(shell_scope)]
 use crate::ShellScopeConfig;
 use crate::{api::ipc::CallbackFn, App, Builder, Context, InvokePayload, Manager, Pattern, Window};
@@ -262,7 +262,7 @@ pub fn assert_ipc_response<T: Serialize + Debug>(
   let ipc = window.state::<Ipc>();
   let (tx, rx) = channel();
   ipc.0.lock().unwrap().insert(IpcKey { callback, error }, tx);
-  window.clone().on_message(payload).unwrap();
+  window.clone().on_message(InvokeId::new(), payload).unwrap();
 
   assert_eq!(
     rx.recv().unwrap(),
