@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serialize_to_javascript::{default_template, Template};
 use std::{future::Future, sync::Arc};
+use tracing::Instrument;
 
 use tauri_macros::default_runtime;
 
@@ -73,10 +74,22 @@ pub struct InvokePayload {
   pub inner: JsonValue,
 }
 
+/// The identifier of the invoke call.
+#[derive(Debug, Copy, Clone)]
+pub struct InvokeId(pub(crate) usize);
+
+impl InvokeId {
+  pub(crate) fn new() -> Self {
+    Self(rand::random())
+  }
+}
+
 /// The message and resolver given to a custom command.
 #[default_runtime(crate::Wry, wry)]
 #[derive(Debug)]
 pub struct Invoke<R: Runtime> {
+  /// The invoke id.
+  pub id: InvokeId,
   /// The message passed.
   pub message: InvokeMessage<R>,
 
@@ -161,14 +174,21 @@ impl From<InvokeError> for InvokeResponse {
 #[default_runtime(crate::Wry, wry)]
 #[derive(Debug)]
 pub struct InvokeResolver<R: Runtime> {
+  id: InvokeId,
   window: Window<R>,
   pub(crate) callback: CallbackFn,
   pub(crate) error: CallbackFn,
 }
 
 impl<R: Runtime> InvokeResolver<R> {
-  pub(crate) fn new(window: Window<R>, callback: CallbackFn, error: CallbackFn) -> Self {
+  pub(crate) fn new(
+    id: InvokeId,
+    window: Window<R>,
+    callback: CallbackFn,
+    error: CallbackFn,
+  ) -> Self {
     Self {
+      id,
       window,
       callback,
       error,
@@ -181,8 +201,13 @@ impl<R: Runtime> InvokeResolver<R> {
     T: Serialize,
     F: Future<Output = Result<T, InvokeError>> + Send + 'static,
   {
+    let span = tracing::trace_span!("ipc.request.respond", id = self.id.0);
     crate::async_runtime::spawn(async move {
-      Self::return_task(self.window, task, self.callback, self.error).await;
+      async move {
+        Self::return_task(self.window, self.id, task, self.callback, self.error).await;
+      }
+      .instrument(span)
+      .await
     });
   }
 
@@ -191,29 +216,50 @@ impl<R: Runtime> InvokeResolver<R> {
   where
     F: Future<Output = Result<JsonValue, InvokeError>> + Send + 'static,
   {
+    let span = tracing::trace_span!("ipc.request.respond", id = self.id.0);
     crate::async_runtime::spawn(async move {
-      let response = match task.await {
-        Ok(ok) => InvokeResponse::Ok(ok),
-        Err(err) => InvokeResponse::Err(err),
-      };
-      Self::return_result(self.window, response, self.callback, self.error)
+      async move {
+        let response = match task.await {
+          Ok(ok) => InvokeResponse::Ok(ok),
+          Err(err) => InvokeResponse::Err(err),
+        };
+        Self::return_result(self.window, self.id, response, self.callback, self.error)
+      }
+      .instrument(span)
+      .await
     });
   }
 
   /// Reply to the invoke promise with a serializable value.
   pub fn respond<T: Serialize>(self, value: Result<T, InvokeError>) {
-    Self::return_result(self.window, value.into(), self.callback, self.error)
+    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    Self::return_result(
+      self.window,
+      self.id,
+      value.into(),
+      self.callback,
+      self.error,
+    )
   }
 
   /// Resolve the invoke promise with a value.
   pub fn resolve<T: Serialize>(self, value: T) {
-    Self::return_result(self.window, Ok(value).into(), self.callback, self.error)
+    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    Self::return_result(
+      self.window,
+      self.id,
+      Ok(value).into(),
+      self.callback,
+      self.error,
+    )
   }
 
   /// Reject the invoke promise with a value.
   pub fn reject<T: Serialize>(self, value: T) {
+    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
     Self::return_result(
       self.window,
+      self.id,
       Result::<(), _>::Err(value.into()).into(),
       self.callback,
       self.error,
@@ -222,7 +268,14 @@ impl<R: Runtime> InvokeResolver<R> {
 
   /// Reject the invoke promise with an [`InvokeError`].
   pub fn invoke_error(self, error: InvokeError) {
-    Self::return_result(self.window, error.into(), self.callback, self.error)
+    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    Self::return_result(
+      self.window,
+      self.id,
+      error.into(),
+      self.callback,
+      self.error,
+    )
   }
 
   /// Asynchronously executes the given task
@@ -230,8 +283,9 @@ impl<R: Runtime> InvokeResolver<R> {
   ///
   /// If the Result `is_ok()`, the callback will be the `success_callback` function name and the argument will be the Ok value.
   /// If the Result `is_err()`, the callback will be the `error_callback` function name and the argument will be the Err value.
-  pub async fn return_task<T, F>(
+  pub(crate) async fn return_task<T, F>(
     window: Window<R>,
+    id: InvokeId,
     task: F,
     success_callback: CallbackFn,
     error_callback: CallbackFn,
@@ -240,24 +294,32 @@ impl<R: Runtime> InvokeResolver<R> {
     F: Future<Output = Result<T, InvokeError>> + Send + 'static,
   {
     let result = task.await;
-    Self::return_closure(window, || result, success_callback, error_callback)
+    Self::return_closure(window, id, || result, success_callback, error_callback)
   }
 
   pub(crate) fn return_closure<T: Serialize, F: FnOnce() -> Result<T, InvokeError>>(
     window: Window<R>,
+    id: InvokeId,
     f: F,
     success_callback: CallbackFn,
     error_callback: CallbackFn,
   ) {
-    Self::return_result(window, f().into(), success_callback, error_callback)
+    Self::return_result(window, id, f().into(), success_callback, error_callback)
   }
 
   pub(crate) fn return_result(
     window: Window<R>,
+    id: InvokeId,
     response: InvokeResponse,
     success_callback: CallbackFn,
     error_callback: CallbackFn,
   ) {
+    let _span = tracing::trace_span!(
+      "ipc.request.response",
+      id = id.0,
+      response = format!("{response:?}")
+    )
+    .entered();
     (window.invoke_responder())(window, response, success_callback, error_callback);
   }
 }

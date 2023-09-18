@@ -217,7 +217,11 @@ pub(crate) fn handle<R: Runtime>(
   config: Arc<Config>,
   package_info: &PackageInfo,
 ) {
-  let Invoke { message, resolver } = invoke;
+  let Invoke {
+    id: _id,
+    message,
+    resolver,
+  } = invoke;
   let InvokeMessage {
     mut payload,
     window,

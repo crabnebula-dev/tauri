@@ -25,9 +25,9 @@ use tauri_utils::{
   html::{SCRIPT_NONCE_TOKEN, STYLE_NONCE_TOKEN},
 };
 
-use crate::hooks::IpcJavascript;
 #[cfg(feature = "isolation")]
 use crate::hooks::IsolationJavascript;
+use crate::hooks::{InvokeId, IpcJavascript};
 use crate::pattern::PatternJavascript;
 use crate::{
   app::{AppHandle, GlobalWindowEvent, GlobalWindowEventListener},
@@ -580,6 +580,11 @@ impl<R: Runtime> WindowManager<R> {
   ) -> WebviewIpcHandler<EventLoopMessage, R> {
     let manager = self.clone();
     Box::new(move |window, #[allow(unused_mut)] mut request| {
+      let invoke_id = InvokeId::new();
+
+      let _span =
+        tracing::trace_span!("ipc.request", id = invoke_id.0, kind = "post-message").entered();
+
       let window = Window::new(manager.clone(), window, app_handle.clone());
 
       #[cfg(feature = "isolation")]
@@ -601,9 +606,14 @@ impl<R: Runtime> WindowManager<R> {
 
       match serde_json::from_str::<InvokePayload>(&request) {
         Ok(message) => {
-          let _ = window.on_message(message);
+          let _span =
+            tracing::trace_span!("ipc.request.handle", id = invoke_id.0, cmd = message.cmd)
+              .entered();
+
+          let _ = window.on_message(invoke_id, message);
         }
         Err(e) => {
+          tracing::trace!("ipc.request.error {}", e);
           let error: crate::Error = e.into();
           let _ = window.eval(&format!(
             r#"console.error({})"#,

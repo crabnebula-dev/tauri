@@ -15,7 +15,7 @@ use crate::{
   app::AppHandle,
   command::{CommandArg, CommandItem},
   event::{Event, EventHandler},
-  hooks::{InvokePayload, InvokeResponder},
+  hooks::{InvokeId, InvokePayload, InvokeResponder},
   manager::WindowManager,
   runtime::{
     http::{Request as HttpRequest, Response as HttpResponse},
@@ -1533,7 +1533,7 @@ impl<R: Runtime> Window<R> {
   }
 
   /// Handles this window receiving an [`InvokeMessage`].
-  pub fn on_message(self, payload: InvokePayload) -> crate::Result<()> {
+  pub fn on_message(self, id: InvokeId, payload: InvokePayload) -> crate::Result<()> {
     let manager = self.manager.clone();
     let current_url = self.url();
     let config_url = manager.get_url();
@@ -1568,8 +1568,12 @@ impl<R: Runtime> Window<R> {
           payload.cmd.to_string(),
           payload.inner,
         );
-        let resolver = InvokeResolver::new(self, payload.callback, payload.error);
-        let invoke = Invoke { message, resolver };
+        let resolver = InvokeResolver::new(id, self, payload.callback, payload.error);
+        let invoke = Invoke {
+          id,
+          message,
+          resolver,
+        };
 
         if !is_local && scope.is_none() {
           invoke.resolver.reject(scope_not_found_error_message);

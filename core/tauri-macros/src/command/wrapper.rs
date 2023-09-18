@@ -82,6 +82,7 @@ enum ArgumentCase {
 
 /// The bindings we attach to `tauri::Invoke`.
 struct Invoke {
+  id: Ident,
   message: Ident,
   resolver: Ident,
 }
@@ -99,6 +100,7 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
   };
 
   let invoke = Invoke {
+    id: format_ident!("__tauri_invoke_id__"),
     message: format_ident!("__tauri_message__"),
     resolver: format_ident!("__tauri_resolver__"),
   };
@@ -161,20 +163,38 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
   }
 
   // body to the command wrapper or a `compile_error!` of an error occurred while parsing it.
-  let body = syn::parse::<WrapperAttributes>(attributes)
+  let (body, attributes) = syn::parse::<WrapperAttributes>(attributes)
     .map(|mut attrs| {
       if function.sig.asyncness.is_some() {
         attrs.execution_context = ExecutionContext::Async;
       }
       attrs
     })
-    .and_then(|attrs| match attrs.execution_context {
-      ExecutionContext::Async => body_async(&function, &invoke, attrs.argument_case),
-      ExecutionContext::Blocking => body_blocking(&function, &invoke, attrs.argument_case),
+    .and_then(|attrs| {
+      let body = match attrs.execution_context {
+        ExecutionContext::Async => body_async(&function, &invoke, attrs.argument_case),
+        ExecutionContext::Blocking => body_blocking(&function, &invoke, attrs.argument_case),
+      };
+      body.map(|b| (b, Some(attrs)))
     })
-    .unwrap_or_else(syn::Error::into_compile_error);
+    .unwrap_or_else(|e| (syn::Error::into_compile_error(e), None));
 
-  let Invoke { message, resolver } = invoke;
+  let Invoke {
+    id,
+    message,
+    resolver,
+  } = invoke;
+
+  let kind = match attributes.as_ref().map(|a| &a.execution_context) {
+    Some(ExecutionContext::Async) if function.sig.asyncness.is_none() => "sync_threadpool",
+    Some(ExecutionContext::Async) => "async",
+    Some(ExecutionContext::Blocking) => "sync",
+    _ => "sync",
+  };
+
+  let loc = function.span().start();
+  let line = loc.line;
+  let col = loc.column;
 
   // Rely on rust 2018 edition to allow importing a macro from a path.
   quote!(
@@ -191,7 +211,17 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
           use ::tauri::command::private::*;
           // prevent warnings when the body is a `compile_error!` or if the command has no arguments
           #[allow(unused_variables)]
-          let ::tauri::Invoke { message: #message, resolver: #resolver } = $invoke;
+          let ::tauri::Invoke { id: #id, message: #message, resolver: #resolver } = $invoke;
+
+          let _span = tracing::debug_span!(
+            "ipc.request.handler",
+            id = #id.0,
+            cmd = #message.command(),
+            kind = #kind,
+            loc.line = #line,
+            loc.col = #col,
+            is_internal = false,
+          ).entered();
 
           #body
       }};
@@ -210,13 +240,24 @@ pub fn wrapper(attributes: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// [`tauri::command`]: https://docs.rs/tauri/*/tauri/runtime/index.html
 fn body_async(function: &ItemFn, invoke: &Invoke, case: ArgumentCase) -> syn::Result<TokenStream2> {
-  let Invoke { message, resolver } = invoke;
-  parse_args(function, message, case).map(|args| {
+  let Invoke {
+    id,
+    message,
+    resolver,
+  } = invoke;
+  parse_args(id, function, message, case).map(|args| {
     quote! {
+      use tracing::Instrument;
+
+      let span = tracing::debug_span!("ipc.request.run", id = #id.0);
       #resolver.respond_async_serialized(async move {
-        let result = $path(#(#args?),*);
-        let kind = (&result).async_kind();
-        kind.future(result).await
+        async move {
+          let result = $path(#(#args?),*);
+          let kind = (&result).async_kind();
+          kind.future(result).await
+        }
+        .instrument(span)
+        .await
       });
     }
   })
@@ -232,8 +273,12 @@ fn body_blocking(
   invoke: &Invoke,
   case: ArgumentCase,
 ) -> syn::Result<TokenStream2> {
-  let Invoke { message, resolver } = invoke;
-  let args = parse_args(function, message, case)?;
+  let Invoke {
+    id,
+    message,
+    resolver,
+  } = invoke;
+  let args = parse_args(id, function, message, case)?;
 
   // the body of a `match` to early return any argument that wasn't successful in parsing.
   let match_body = quote!({
@@ -242,6 +287,7 @@ fn body_blocking(
   });
 
   Ok(quote! {
+    let _span = tracing::debug_span!("ipc.request.run", id = #id.0).entered();
     let result = $path(#(match #args #match_body),*);
     let kind = (&result).blocking_kind();
     kind.block(result, #resolver);
@@ -250,6 +296,7 @@ fn body_blocking(
 
 /// Parse all arguments for the command wrapper to use from the signature of the command function.
 fn parse_args(
+  invoke_id: &Ident,
   function: &ItemFn,
   message: &Ident,
   case: ArgumentCase,
@@ -258,12 +305,13 @@ fn parse_args(
     .sig
     .inputs
     .iter()
-    .map(|arg| parse_arg(&function.sig.ident, arg, message, case))
+    .map(|arg| parse_arg(invoke_id, &function.sig.ident, arg, message, case))
     .collect()
 }
 
 /// Transform a [`FnArg`] into a command argument.
 fn parse_arg(
+  invoke_id: &Ident,
   command: &Ident,
   arg: &FnArg,
   message: &Ident,
@@ -313,6 +361,7 @@ fn parse_arg(
 
   Ok(quote!(::tauri::command::CommandArg::from_command(
     ::tauri::command::CommandItem {
+      invoke_id: #invoke_id,
       name: stringify!(#command),
       key: #key,
       message: &#message,

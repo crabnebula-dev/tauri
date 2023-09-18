@@ -3580,6 +3580,7 @@ dependencies = [
  "thiserror",
  "time",
  "tokio",
+ "tracing",
  "url",
  "uuid",
  "webkit2gtk",
