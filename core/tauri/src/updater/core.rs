@@ -337,7 +337,7 @@ impl<R: Runtime> UpdateBuilder<R> {
       (target.to_string(), format!("{target}-{arch}"))
     };
 
-    tracing::Span::current().record("arch", &arch);
+    tracing::Span::current().record("arch", arch);
     tracing::Span::current().record("target", &target);
 
     // Get the extract_path from the provided executable_path

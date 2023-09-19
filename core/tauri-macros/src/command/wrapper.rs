@@ -251,14 +251,11 @@ fn body_async(function: &ItemFn, invoke: &Invoke, case: ArgumentCase) -> syn::Re
 
       let span = tracing::debug_span!("ipc.request.run", id = #id.0);
       #resolver.respond_async_serialized(async move {
-        async move {
-          let result = $path(#(#args?),*);
-          let kind = (&result).async_kind();
-          kind.future(result).await
-        }
-        .instrument(span)
-        .await
-      });
+        let result = $path(#(#args?),*);
+        let kind = (&result).async_kind();
+        kind.future(result).await
+      }
+      .instrument(span));
     }
   })
 }

@@ -202,13 +202,12 @@ impl<R: Runtime> InvokeResolver<R> {
     F: Future<Output = Result<T, InvokeError>> + Send + 'static,
   {
     let span = tracing::trace_span!("ipc.request.respond", id = self.id.0);
-    crate::async_runtime::spawn(async move {
+    crate::async_runtime::spawn(
       async move {
         Self::return_task(self.window, self.id, task, self.callback, self.error).await;
       }
-      .instrument(span)
-      .await
-    });
+      .instrument(span),
+    );
   }
 
   /// Reply to the invoke promise with an async task which is already serialized.
@@ -217,7 +216,7 @@ impl<R: Runtime> InvokeResolver<R> {
     F: Future<Output = Result<JsonValue, InvokeError>> + Send + 'static,
   {
     let span = tracing::trace_span!("ipc.request.respond", id = self.id.0);
-    crate::async_runtime::spawn(async move {
+    crate::async_runtime::spawn(
       async move {
         let response = match task.await {
           Ok(ok) => InvokeResponse::Ok(ok),
@@ -225,9 +224,8 @@ impl<R: Runtime> InvokeResolver<R> {
         };
         Self::return_result(self.window, self.id, response, self.callback, self.error)
       }
-      .instrument(span)
-      .await
-    });
+      .instrument(span),
+    );
   }
 
   /// Reply to the invoke promise with a serializable value.
