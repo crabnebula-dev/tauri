@@ -201,7 +201,7 @@ impl<R: Runtime> InvokeResolver<R> {
     T: Serialize,
     F: Future<Output = Result<T, InvokeError>> + Send + 'static,
   {
-    let span = tracing::trace_span!("ipc.request.respond", id = self.id.0);
+    let span = tracing::trace_span!("ipc::request::respond", id = self.id.0);
     crate::async_runtime::spawn(
       async move {
         Self::return_task(self.window, self.id, task, self.callback, self.error).await;
@@ -215,7 +215,7 @@ impl<R: Runtime> InvokeResolver<R> {
   where
     F: Future<Output = Result<JsonValue, InvokeError>> + Send + 'static,
   {
-    let span = tracing::trace_span!("ipc.request.respond", id = self.id.0);
+    let span = tracing::trace_span!("ipc::request::respond", id = self.id.0);
     crate::async_runtime::spawn(
       async move {
         let response = match task.await {
@@ -230,7 +230,7 @@ impl<R: Runtime> InvokeResolver<R> {
 
   /// Reply to the invoke promise with a serializable value.
   pub fn respond<T: Serialize>(self, value: Result<T, InvokeError>) {
-    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    let _span = tracing::trace_span!("ipc::request::respond", id = self.id.0).entered();
     Self::return_result(
       self.window,
       self.id,
@@ -242,7 +242,7 @@ impl<R: Runtime> InvokeResolver<R> {
 
   /// Resolve the invoke promise with a value.
   pub fn resolve<T: Serialize>(self, value: T) {
-    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    let _span = tracing::trace_span!("ipc::request::respond", id = self.id.0).entered();
     Self::return_result(
       self.window,
       self.id,
@@ -254,7 +254,7 @@ impl<R: Runtime> InvokeResolver<R> {
 
   /// Reject the invoke promise with a value.
   pub fn reject<T: Serialize>(self, value: T) {
-    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    let _span = tracing::trace_span!("ipc::request::respond", id = self.id.0).entered();
     Self::return_result(
       self.window,
       self.id,
@@ -266,7 +266,7 @@ impl<R: Runtime> InvokeResolver<R> {
 
   /// Reject the invoke promise with an [`InvokeError`].
   pub fn invoke_error(self, error: InvokeError) {
-    let _span = tracing::trace_span!("ipc.request.respond", id = self.id.0).entered();
+    let _span = tracing::trace_span!("ipc::request::respond", id = self.id.0).entered();
     Self::return_result(
       self.window,
       self.id,
@@ -313,7 +313,7 @@ impl<R: Runtime> InvokeResolver<R> {
     error_callback: CallbackFn,
   ) {
     let _span = tracing::trace_span!(
-      "ipc.request.response",
+      "ipc::request::response",
       id = id.0,
       response = format!("{response:?}")
     )

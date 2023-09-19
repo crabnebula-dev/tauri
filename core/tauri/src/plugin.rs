@@ -620,7 +620,7 @@ impl<R: Runtime> PluginStore<R> {
   /// Runs the created hook for all plugins in the store.
   pub(crate) fn created(&mut self, window: Window<R>) {
     self.store.values_mut().for_each(|plugin| {
-      let _span = tracing::trace_span!("plugin.hooks.created", name = plugin.name()).entered();
+      let _span = tracing::trace_span!("plugin::hooks::created", name = plugin.name()).entered();
       plugin.created(window.clone())
     })
   }
@@ -628,7 +628,8 @@ impl<R: Runtime> PluginStore<R> {
   /// Runs the on_page_load hook for all plugins in the store.
   pub(crate) fn on_page_load(&mut self, window: Window<R>, payload: PageLoadPayload) {
     self.store.values_mut().for_each(|plugin| {
-      let _span = tracing::trace_span!("plugin.hooks.on_page_load", name = plugin.name()).entered();
+      let _span =
+        tracing::trace_span!("plugin::hooks::on_page_load", name = plugin.name()).entered();
       plugin.on_page_load(window.clone(), payload.clone())
     })
   }
@@ -636,7 +637,7 @@ impl<R: Runtime> PluginStore<R> {
   /// Runs the on_event hook for all plugins in the store.
   pub(crate) fn on_event(&mut self, app: &AppHandle<R>, event: &RunEvent) {
     self.store.values_mut().for_each(|plugin| {
-      let _span = tracing::trace_span!("plugin.hooks.on_event", name = plugin.name()).entered();
+      let _span = tracing::trace_span!("plugin::hooks::on_event", name = plugin.name()).entered();
       plugin.on_event(app, event)
     })
   }
@@ -652,7 +653,7 @@ impl<R: Runtime> PluginStore<R> {
         .next()
         .map(|c| c.to_string())
         .unwrap_or_else(String::new);
-      let _span = tracing::trace_span!("plugin.hooks.ipc", name = plugin.name()).entered();
+      let _span = tracing::trace_span!("plugin::hooks::ipc", name = plugin.name()).entered();
       plugin.extend_api(invoke);
     } else {
       invoke.resolver.reject(format!("plugin {target} not found"));

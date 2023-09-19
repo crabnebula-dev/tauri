@@ -593,7 +593,7 @@ impl<R: Runtime> Update<R> {
     let buffer = {
       use futures_util::StreamExt;
       let mut stream = response.bytes_stream();
-      let span = tracing::info_span!("updater.download_and_install.stream");
+      let span = tracing::info_span!("updater::download_and_install::stream");
       async move {
         let mut buffer = Vec::new();
         while let Some(chunk) = stream.next().await {
@@ -620,7 +620,7 @@ impl<R: Runtime> Update<R> {
     // TODO: implement updater in mobile
     #[cfg(desktop)]
     {
-      tracing::info_span!("updater.download_and_install.install");
+      tracing::info_span!("updater::download_and_install::install");
       // we copy the files depending of the operating system
       // we run the setup, appimage re-install or overwrite the
       // macos .app

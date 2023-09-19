@@ -3163,10 +3163,10 @@ fn create_webview<T: UserEvent>(
   #[cfg(windows)]
   let proxy = context.proxy.clone();
 
-  let _webview_create_span = tracing::debug_span!("wry.webview.create").entered();
-  let window_draw_span = tracing::debug_span!("wry.window.draw").entered();
+  let _webview_create_span = tracing::debug_span!("wry::webview::create").entered();
+  let window_draw_span = tracing::debug_span!("wry::window::draw").entered();
   let window_create_span =
-    tracing::debug_span!(parent: &window_draw_span, "wry.window.create").entered();
+    tracing::debug_span!(parent: &window_draw_span, "wry::window::create").entered();
 
   let window_event_listeners = WindowEventListeners::default();
 
