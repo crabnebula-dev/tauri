@@ -321,7 +321,7 @@ impl<'a, R: Runtime> WindowBuilder<'a, R> {
   }
 
   /// Creates a new webview window.
-  #[tracing::instrument(name = "window.create")]
+  #[tracing::instrument(name = "window::create")]
   pub fn build(mut self) -> crate::Result<Window<R>> {
     let mut pending = PendingWindow::new(
       self.window_builder.clone(),
@@ -771,7 +771,7 @@ impl<R: Runtime> PartialEq for Window<R> {
 }
 
 impl<R: Runtime> Manager<R> for Window<R> {
-  #[tracing::instrument("window.emit.to", skip(self, payload))]
+  #[tracing::instrument("window::emit::to", skip(self, payload))]
   fn emit_to<S: Serialize + Clone>(
     &self,
     label: &str,
@@ -783,7 +783,7 @@ impl<R: Runtime> Manager<R> for Window<R> {
       .emit_filter(event, Some(self.label()), payload, |w| label == w.label())
   }
 
-  #[tracing::instrument("window.emit.all", skip(self, payload))]
+  #[tracing::instrument("window::emit::all", skip(self, payload))]
   fn emit_all<S: Serialize + Clone>(&self, event: &str, payload: S) -> crate::Result<()> {
     self
       .manager()

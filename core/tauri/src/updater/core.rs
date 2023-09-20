@@ -313,7 +313,7 @@ impl<R: Runtime> UpdateBuilder<R> {
     Ok(self)
   }
 
-  #[tracing::instrument("updater.check", skip_all, fields(arch, target), ret, err)]
+  #[tracing::instrument("updater::check", skip_all, fields(arch, target), ret, err)]
   pub async fn build(mut self) -> Result<Update<R>> {
     let mut remote_release: Option<RemoteRelease> = None;
 
@@ -534,7 +534,7 @@ impl<R: Runtime> Update<R> {
 
   // Download and install our update
   // @todo(lemarier): Split into download and install (two step) but need to be thread safe
-  #[tracing::instrument("updater.download_and_install", skip_all, fields(url = %self.download_url), ret, err)]
+  #[tracing::instrument("updater::download_and_install", skip_all, fields(url = %self.download_url), ret, err)]
   pub async fn download_and_install<C: Fn(usize, Option<u64>), D: FnOnce()>(
     &self,
     pub_key: String,
