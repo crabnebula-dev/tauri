@@ -3047,6 +3047,8 @@ impl PackageConfig {
 /// }
 /// ```
 #[skip_serializing_none]
+#[no_mangle]
+#[link_section = ".tauri_config"]
 #[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
