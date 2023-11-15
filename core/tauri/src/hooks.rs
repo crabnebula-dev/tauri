@@ -328,6 +328,7 @@ pub fn window_invoke_responder<R: Runtime>(
   success_callback: CallbackFn,
   error_callback: CallbackFn,
 ) {
+  let _span = tracing::trace_span!("ipc::request::eval_response").entered();
   let callback_string =
     match format_callback_result(response.into_result(), success_callback, error_callback) {
       Ok(callback_string) => callback_string,
