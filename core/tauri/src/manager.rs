@@ -595,8 +595,13 @@ impl<R: Runtime> WindowManager<R> {
     Box::new(move |window, #[allow(unused_mut)] mut request| {
       let invoke_id = InvokeId::new();
 
-      let _span =
-        tracing::trace_span!("ipc::request", id = invoke_id.0, kind = "post-message").entered();
+      let _span = tracing::trace_span!(
+        "ipc::request",
+        id = invoke_id.0,
+        kind = "post-message",
+        request = request
+      )
+      .entered();
 
       let window = Window::new(manager.clone(), window, app_handle.clone());
 
