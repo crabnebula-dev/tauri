@@ -625,7 +625,7 @@ pub trait Manager<R: Runtime>: sealed::ManagerBase<R> {
   ///   app.emit_all("synchronized", ());
   /// }
   /// ```
-  #[tracing::instrument("app::emit.all", skip(self, payload))]
+  #[tracing::instrument("app::emit::all", skip(self, payload))]
   fn emit_all<S: Serialize + Clone>(&self, event: &str, payload: S) -> Result<()> {
     self.manager().emit_filter(event, None, payload, |_| true)
   }
