@@ -1799,7 +1799,7 @@ impl<R: Runtime> Window<R> {
   }
 
   #[tracing::instrument(
-    "window.emit",
+    "window::emit",
     skip(emit_args),
     fields(
       event = emit_args.event,
