@@ -68,6 +68,7 @@ impl WindowEmitArgs {
     source_window_label: Option<&str>,
     payload: S,
   ) -> crate::Result<Self> {
+    let _span = tracing::debug_span!("window::emit::serialize").entered();
     Ok(WindowEmitArgs {
       event: serde_json::to_string(event)?,
       source_window_label: serde_json::to_string(&source_window_label)?,
