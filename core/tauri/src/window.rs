@@ -1800,7 +1800,7 @@ impl<R: Runtime> Window<R> {
   }
 
   #[tracing::instrument(
-    "window::emit",
+    "window::emit::eval",
     skip(emit_args),
     fields(
       event = emit_args.event,
@@ -1834,6 +1834,7 @@ impl<R: Runtime> Window<R> {
   ///   }
   /// }
   /// ```
+  #[tracing::instrument("window::emit", skip(self, payload))]
   pub fn emit<S: Serialize + Clone>(&self, event: &str, payload: S) -> crate::Result<()> {
     self
       .manager
@@ -1926,6 +1927,7 @@ impl<R: Runtime> Window<R> {
   ///   }
   /// }
   /// ```
+  #[tracing::instrument("window::trigger", skip(self))]
   pub fn trigger(&self, event: &str, data: Option<String>) {
     let label = self.window.label.clone();
     self.manager.trigger(event, Some(label), data)
