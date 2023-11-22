@@ -1,5 +1,17 @@
 # Changelog
 
+## \[1.5.2]
+
+### Bug Fixes
+
+- [`21cdbb41`](https://www.github.com/tauri-apps/tauri/commit/21cdbb41a38f465148bbeb82feb3e7886c320182)([#7982](https://www.github.com/tauri-apps/tauri/pull/7982)) Set the correct `truncate` option on `OpenOptions` so that `write_file` can completely overwrite existing files.
+
+## \[1.5.1]
+
+### Bug Fixes
+
+- [`3671edbc`](https://www.github.com/tauri-apps/tauri/commit/3671edbcff37447c95382ab4c9fd1c36a460a037)([#7937](https://www.github.com/tauri-apps/tauri/pull/7937)) Fix devtools not toggling on `ctrl+shift+i` or `cmd+alt+i` shortcuts.
+
 ## \[1.5.0]
 
 ### New Features

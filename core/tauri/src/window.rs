@@ -1639,7 +1639,7 @@ impl<R: Runtime> Window<R> {
         window_label,
         event,
       })
-      .or_insert_with(Default::default)
+      .or_default()
       .insert(id);
   }
 

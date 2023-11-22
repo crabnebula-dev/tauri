@@ -1,5 +1,41 @@
 # Changelog
 
+## \[1.4.5]
+
+### Enhancements
+
+- [`cfe6fa6c`](https://www.github.com/tauri-apps/tauri/commit/cfe6fa6c91a8cc177d4665ba04dad32ba545159d)([#8061](https://www.github.com/tauri-apps/tauri/pull/8061)) Added German language support to the NSIS bundler.
+
+## \[1.4.4]
+
+### Enhancements
+
+- [`3880b42d`](https://www.github.com/tauri-apps/tauri/commit/3880b42d18f218b89998bb5ead1aacfbed9d6202)([#7974](https://www.github.com/tauri-apps/tauri/pull/7974)) Include notarytool log output on error message in case notarization fails.
+
+### Bug Fixes
+
+- [`be8e5aa3`](https://www.github.com/tauri-apps/tauri/commit/be8e5aa3071d9bc5d0bd24647e8168f312d11c8d)([#8042](https://www.github.com/tauri-apps/tauri/pull/8042)) Fixes duplicated newlines on command outputs.
+
+## \[1.4.3]
+
+### Bug Fixes
+
+- [`d0ae6750`](https://www.github.com/tauri-apps/tauri/commit/d0ae67503cdb2aeaadcea27af67285eea1cf3756)([#8012](https://www.github.com/tauri-apps/tauri/pull/8012)) Read `HTTP_PROXY` env var when downloading bundling resources on Windows.
+- [`113bcd7b`](https://www.github.com/tauri-apps/tauri/commit/113bcd7b684a72eb0f421c663c6aa874197252bb)([#7980](https://www.github.com/tauri-apps/tauri/pull/7980)) In Debian packages, set `root` the owner of control files and package files.
+
+## \[1.4.2]
+
+### Bug Fixes
+
+- [`f552c179`](https://www.github.com/tauri-apps/tauri/commit/f552c1796a61a5cfd51fad6d616bea3164b48a21)([#7998](https://www.github.com/tauri-apps/tauri/pull/7998)) Update the WebView2 offline installer GUIDs to resolve the 404 HTTP response status codes.
+
+## \[1.4.1]
+
+### Bug Fixes
+
+- [`40d34002`](https://www.github.com/tauri-apps/tauri/commit/40d340021c0eab65aa1713807f7564e0698a321e)([#7972](https://www.github.com/tauri-apps/tauri/pull/7972)) The `APPLE_TEAM_ID` environment variable is now required for notarization authentication via Apple ID and app-specific password.
+- [`cdd5516f`](https://www.github.com/tauri-apps/tauri/commit/cdd5516f339ad4345623a1e785c6e2c3a77477f8)([#7956](https://www.github.com/tauri-apps/tauri/pull/7956)) Fixes an app crash on app updates when the product name contained spaces.
+
 ## \[1.4.0]
 
 ### New Features
