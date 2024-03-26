@@ -123,11 +123,35 @@ user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-05-02"
 end = "2025-03-06"
 
+[[trusted.javascriptcore-rs]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-10-04"
+end = "2025-03-26"
+
+[[trusted.javascriptcore-rs-sys]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-10-04"
+end = "2025-03-26"
+
 [[trusted.js-sys]]
 criteria = "safe-to-deploy"
 user-id = 1 # Alex Crichton (alexcrichton)
 start = "2019-03-04"
 end = "2025-03-06"
+
+[[trusted.libappindicator]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-10-11"
+end = "2025-03-26"
+
+[[trusted.libappindicator-sys]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-10-11"
+end = "2025-03-26"
 
 [[trusted.libc]]
 criteria = "safe-to-deploy"
@@ -176,6 +200,12 @@ criteria = "safe-to-deploy"
 user-id = 10 # Carl Lerche (carllerche)
 start = "2019-05-15"
 end = "2025-03-06"
+
+[[trusted.muda]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2022-12-06"
+end = "2025-03-26"
 
 [[trusted.num_cpus]]
 criteria = "safe-to-deploy"
@@ -363,11 +393,77 @@ user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-03-01"
 end = "2025-03-06"
 
+[[trusted.tao]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-04-30"
+end = "2025-03-26"
+
+[[trusted.tao-macros]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2023-01-11"
+end = "2025-03-26"
+
 [[trusted.target-lexicon]]
 criteria = "safe-to-deploy"
 user-id = 6825 # Dan Gohman (sunfishcode)
 start = "2019-03-06"
 end = "2025-03-06"
+
+[[trusted.tauri]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2020-07-20"
+end = "2025-03-26"
+
+[[trusted.tauri-build]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-04-14"
+end = "2025-03-26"
+
+[[trusted.tauri-codegen]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-04-14"
+end = "2025-03-26"
+
+[[trusted.tauri-macros]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-04-14"
+end = "2025-03-26"
+
+[[trusted.tauri-plugin]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2024-02-03"
+end = "2025-03-26"
+
+[[trusted.tauri-runtime]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-05-10"
+end = "2025-03-26"
+
+[[trusted.tauri-runtime-wry]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-05-10"
+end = "2025-03-26"
+
+[[trusted.tauri-utils]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-04-14"
+end = "2025-03-26"
+
+[[trusted.tauri-winres]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2023-01-19"
+end = "2025-03-26"
 
 [[trusted.thiserror]]
 criteria = "safe-to-deploy"
@@ -428,6 +524,12 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2021-09-13"
 end = "2025-03-06"
+
+[[trusted.tray-icon]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2022-12-01"
+end = "2025-03-26"
 
 [[trusted.ucd-trie]]
 criteria = "safe-to-deploy"
@@ -495,11 +597,29 @@ user-id = 1 # Alex Crichton (alexcrichton)
 start = "2019-03-04"
 end = "2025-03-06"
 
+[[trusted.webkit2gtk]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-10-05"
+end = "2025-03-26"
+
+[[trusted.webkit2gtk-sys]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-10-05"
+end = "2025-03-26"
+
 [[trusted.winapi-util]]
 criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2020-01-11"
 end = "2025-03-06"
+
+[[trusted.window-vibrancy]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2022-03-05"
+end = "2025-03-26"
 
 [[trusted.windows]]
 criteria = "safe-to-deploy"
@@ -596,3 +716,9 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2023-02-22"
 end = "2025-03-06"
+
+[[trusted.wry]]
+criteria = "safe-to-deploy"
+user-id = 95389 # tauri (tauri-bot)
+start = "2021-03-11"
+end = "2025-03-26"

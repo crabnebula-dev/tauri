@@ -168,12 +168,40 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
+[[publisher.javascriptcore-rs]]
+version = "1.1.2"
+when = "2023-10-26"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.javascriptcore-rs-sys]]
+version = "1.1.1"
+when = "2023-10-26"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
 [[publisher.js-sys]]
 version = "0.3.68"
 when = "2024-02-06"
 user-id = 1
 user-login = "alexcrichton"
 user-name = "Alex Crichton"
+
+[[publisher.libappindicator]]
+version = "0.9.0"
+when = "2023-10-01"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.libappindicator-sys]]
+version = "0.9.0"
+when = "2023-10-01"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
 
 [[publisher.libc]]
 version = "0.2.146"
@@ -230,6 +258,13 @@ when = "2023-03-20"
 user-id = 359
 user-login = "seanmonstar"
 user-name = "Sean McArthur"
+
+[[publisher.muda]]
+version = "0.12.1"
+when = "2024-03-11"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
 
 [[publisher.num_cpus]]
 version = "1.16.0"
@@ -483,12 +518,89 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
+[[publisher.tao]]
+version = "0.26.1"
+when = "2024-02-28"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tao-macros]]
+version = "0.1.2"
+when = "2023-08-13"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
 [[publisher.target-lexicon]]
 version = "0.12.14"
 when = "2024-02-22"
 user-id = 6825
 user-login = "sunfishcode"
 user-name = "Dan Gohman"
+
+[[publisher.tauri]]
+version = "2.0.0-beta.12"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-build]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-codegen]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-macros]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-plugin]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-runtime]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-runtime-wry]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-utils]]
+version = "2.0.0-beta.10"
+when = "2024-03-18"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.tauri-winres]]
+version = "0.1.1"
+when = "2023-05-04"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
 
 [[publisher.thiserror]]
 version = "1.0.57"
@@ -559,6 +671,13 @@ when = "2023-10-03"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
+
+[[publisher.tray-icon]]
+version = "0.12.0"
+when = "2024-03-07"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
 
 [[publisher.ucd-trie]]
 version = "0.1.6"
@@ -651,12 +770,33 @@ user-id = 1
 user-login = "alexcrichton"
 user-name = "Alex Crichton"
 
+[[publisher.webkit2gtk]]
+version = "2.0.1"
+when = "2023-10-26"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
+[[publisher.webkit2gtk-sys]]
+version = "2.0.1"
+when = "2023-10-26"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
+
 [[publisher.winapi-util]]
 version = "0.1.6"
 when = "2023-09-20"
 user-id = 189
 user-login = "BurntSushi"
 user-name = "Andrew Gallant"
+
+[[publisher.window-vibrancy]]
+version = "0.5.0"
+when = "2024-02-07"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
 
 [[publisher.windows]]
 version = "0.52.0"
@@ -909,6 +1049,13 @@ when = "2024-02-12"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
+
+[[publisher.wry]]
+version = "0.37.0"
+when = "2024-02-21"
+user-id = 95389
+user-login = "tauri-bot"
+user-name = "tauri"
 
 [[audits.bytecode-alliance.wildcard-audits.bumpalo]]
 who = "Nick Fitzgerald <fitzgen@gmail.com>"
@@ -1317,6 +1464,12 @@ who = "Johan Andersson <opensource@embark-studios.com>"
 criteria = "safe-to-deploy"
 delta = "0.6.1 -> 0.6.2"
 notes = "No notable changes"
+
+[[audits.embark-studios.audits.unic-ucd-version]]
+who = "Johan Andersson <opensource@embark-studios.com>"
+criteria = "safe-to-deploy"
+version = "0.9.0"
+notes = "Only few constants. No unsafe usage or other ambient capabilities"
 
 [[audits.embark-studios.audits.valuable]]
 who = "Johan Andersson <opensource@embark-studios.com>"
