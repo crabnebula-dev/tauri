@@ -986,19 +986,25 @@ pub mod test;
 const _: () = {
   use specta::{function::FunctionArg, DataType, TypeMap};
 
-  impl<'r, T: Send + Sync + 'static> FunctionArg for crate::State<'r, T> {
+  impl<'a> FunctionArg for crate::ipc::Request {
+    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
+      None
+    }
+  }
+
+  impl<T: crate::ipc::ScopeObject> FunctionArg for crate::ipc::CommandScope<T> {
+    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
+      None
+    }
+  }
+
+  impl<T: crate::ipc::ScopeObject> FunctionArg for crate::ipc::GlobalScope<T> {
     fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
       None
     }
   }
 
   impl<R: crate::Runtime> FunctionArg for crate::AppHandle<R> {
-    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
-      None
-    }
-  }
-
-  impl<R: crate::Runtime> FunctionArg for crate::Window<R> {
     fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
       None
     }
@@ -1011,6 +1017,24 @@ const _: () = {
   }
 
   impl<R: crate::Runtime> FunctionArg for crate::WebviewWindow<R> {
+    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
+      None
+    }
+  }
+
+  impl<R: crate::Runtime> FunctionArg for crate::Window<R> {
+    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
+      None
+    }
+  }
+
+  impl FunctionArg for crate::ipc::Channel {
+    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
+      None
+    }
+  }
+
+  impl<'r, T: Send + Sync + 'static> FunctionArg for crate::State<'r, T> {
     fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
       None
     }
