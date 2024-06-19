@@ -986,7 +986,7 @@ pub mod test;
 const _: () = {
   use specta::{function::FunctionArg, DataType, TypeMap};
 
-  impl<'a> FunctionArg for crate::ipc::Request {
+  impl<'a> FunctionArg for crate::ipc::Request<'a> {
     fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
       None
     }
