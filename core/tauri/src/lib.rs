@@ -1028,12 +1028,6 @@ const _: () = {
     }
   }
 
-  impl FunctionArg for crate::ipc::Channel {
-    fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
-      None
-    }
-  }
-
   impl<'r, T: Send + Sync + 'static> FunctionArg for crate::State<'r, T> {
     fn to_datatype(_: &mut TypeMap) -> Option<DataType> {
       None

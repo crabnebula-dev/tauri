@@ -42,6 +42,13 @@ pub struct Channel {
   on_message: Arc<dyn Fn(InvokeBody) -> crate::Result<()> + Send + Sync>,
 }
 
+#[cfg(feature = "specta")]
+const _: () = {
+  #[derive(specta::Type)]
+  #[specta(remote = Channel, inline)]
+  pub struct ChannelType(specta::Any);
+};
+
 impl Serialize for Channel {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
