@@ -5,6 +5,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use crate::{
+  ipc::IpcResponse,
   manager::AppManager,
   webview::{InvokeRequest, UriSchemeProtocolHandler},
   Runtime,
@@ -328,7 +329,9 @@ fn handle_ipc_message<R: Runtime>(request: Request<String>, manager: &AppManager
                   if !(cfg!(target_os = "macos") || cfg!(target_os = "ios"))
                     && matches!(v, JsonValue::Object(_) | JsonValue::Array(_))
                   {
-                    let _ = Channel::from_callback_fn(webview, callback).send(v);
+                    let _ = v
+                      .body()
+                      .map(|v| Channel::from_callback_fn(webview, callback).send(v));
                   } else {
                     responder_eval(
                       &webview,

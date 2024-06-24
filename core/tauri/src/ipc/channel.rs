@@ -4,6 +4,7 @@
 
 use std::{
   collections::HashMap,
+  marker::PhantomData,
   str::FromStr,
   sync::{
     atomic::{AtomicU32, AtomicUsize, Ordering},
@@ -37,12 +38,13 @@ pub struct ChannelDataIpcQueue(pub(crate) Arc<Mutex<HashMap<u32, InvokeBody>>>);
 
 /// An IPC channel.
 #[derive(Clone)]
-pub struct Channel {
+pub struct Channel<T = InvokeBody> {
   id: u32,
-  on_message: Arc<dyn Fn(InvokeBody) -> crate::Result<()> + Send + Sync>,
+  on_message: Arc<dyn Fn(T) -> crate::Result<()> + Send + Sync>,
+  phantom: PhantomData<T>,
 }
 
-impl Serialize for Channel {
+impl<T> Serialize for Channel<T> {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
     S: Serializer,
@@ -88,11 +90,13 @@ impl FromStr for JavaScriptChannelId {
 
 impl JavaScriptChannelId {
   /// Gets a [`Channel`] for this channel ID on the given [`Webview`].
-  pub fn channel_on<R: Runtime>(&self, webview: Webview<R>) -> Channel {
+  pub fn channel_on<R: Runtime, T: IpcResponse>(&self, webview: Webview<R>) -> Channel<T> {
     let callback_id = self.0;
     let counter = AtomicUsize::new(0);
 
-    Channel::new_with_id(callback_id.0, move |body| {
+    Channel::<T>::new_with_id(callback_id.0, move |data| {
+      let body = data.body()?;
+
       let data_id = CHANNEL_DATA_COUNTER.fetch_add(1, Ordering::Relaxed);
 
       webview
@@ -128,21 +132,20 @@ impl<'de> Deserialize<'de> for JavaScriptChannelId {
   }
 }
 
-impl Channel {
+impl<T> Channel<T> {
   /// Creates a new channel with the given message handler.
-  pub fn new<F: Fn(InvokeBody) -> crate::Result<()> + Send + Sync + 'static>(
-    on_message: F,
-  ) -> Self {
+  pub fn new<F: Fn(T) -> crate::Result<()> + Send + Sync + 'static>(on_message: F) -> Self {
     Self::new_with_id(CHANNEL_COUNTER.fetch_add(1, Ordering::Relaxed), on_message)
   }
 
-  fn new_with_id<F: Fn(InvokeBody) -> crate::Result<()> + Send + Sync + 'static>(
+  fn new_with_id<F: Fn(T) -> crate::Result<()> + Send + Sync + 'static>(
     id: u32,
     on_message: F,
   ) -> Self {
     #[allow(clippy::let_and_return)]
     let channel = Self {
       id,
+      phantom: Default::default(),
       on_message: Arc::new(on_message),
     };
 
@@ -152,6 +155,21 @@ impl Channel {
     channel
   }
 
+  /// The channel identifier.
+  pub fn id(&self) -> u32 {
+    self.id
+  }
+
+  /// Sends the given data through the channel.
+  pub fn send(&self, data: T) -> crate::Result<()>
+  where
+    T: IpcResponse,
+  {
+    (self.on_message)(data)
+  }
+}
+
+impl Channel<InvokeBody> {
   pub(crate) fn from_callback_fn<R: Runtime>(webview: Webview<R>, callback: CallbackFn) -> Self {
     Channel::new_with_id(callback.0, move |body| {
       let data_id = CHANNEL_DATA_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -171,20 +189,9 @@ impl Channel {
       Ok(())
     })
   }
-
-  /// The channel identifier.
-  pub fn id(&self) -> u32 {
-    self.id
-  }
-
-  /// Sends the given data through the channel.
-  pub fn send<T: IpcResponse>(&self, data: T) -> crate::Result<()> {
-    let body = data.body()?;
-    (self.on_message)(body)
-  }
 }
 
-impl<'de, R: Runtime> CommandArg<'de, R> for Channel {
+impl<'de, R: Runtime, T: IpcResponse> CommandArg<'de, R> for Channel<T> {
   /// Grabs the [`Webview`] from the [`CommandItem`] and returns the associated [`Channel`].
   fn from_command(command: CommandItem<'de, R>) -> Result<Self, InvokeError> {
     let name = command.name;
@@ -196,8 +203,8 @@ impl<'de, R: Runtime> CommandArg<'de, R> for Channel {
       .map(|id| id.channel_on(webview))
       .map_err(|_| {
         InvokeError::from_anyhow(anyhow::anyhow!(
-        "invalid channel value `{value}`, expected a string in the `{IPC_PAYLOAD_PREFIX}ID` format"
-      ))
+	        "invalid channel value `{value}`, expected a string in the `{IPC_PAYLOAD_PREFIX}ID` format"
+	      ))
       })
   }
 }
