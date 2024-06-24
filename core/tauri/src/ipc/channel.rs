@@ -44,6 +44,13 @@ pub struct Channel<T = InvokeBody> {
   phantom: PhantomData<T>,
 }
 
+#[cfg(feature = "specta")]
+const _: () = {
+  #[derive(specta::Type)]
+  #[specta(remote = Channel, rename = "TAURI_CHANNEL")]
+  struct ChannelType<T>(PhantomData<T>);
+};
+
 impl<T> Serialize for Channel<T> {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
